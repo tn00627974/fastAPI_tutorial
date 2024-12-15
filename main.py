@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi import Query  # 用來設定查詢參數
+from pydantic import BaseModel  #
 
 app = FastAPI()
 
@@ -35,3 +36,14 @@ async def search_products(
         "sort_by": sort_by,
         "results": "Here are the filtered products",
     }
+
+
+class Item(BaseModel):
+    name: str
+    price: float
+    description: str = None
+
+
+@app.post("/item/")
+async def create_item(item: Item):
+    return item
