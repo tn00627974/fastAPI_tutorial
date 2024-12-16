@@ -266,3 +266,91 @@ uvicorn main:app --reload
 
 若是資料錯誤會出現422
 代表資料不符合格式進行報錯
+
+
+![](https://i.imgur.com/ArAbU9h.png)
+
+
+
+
+# 05_FastAPI靜態檔案處理與模板結合實作
+
+![](https://i.imgur.com/m4DJZPo.png)
+
+
+
+![](https://i.imgur.com/AXtOZHK.png)
+
+創建 static/images/yourpicture
+
+- main_py
+```python
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi.requests import Request
+
+app = FastAPI()
+
+# 掛載 static 資料夾處理靜態檔案
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# 建立 Jinja2 模板引擎的實例,指定模板所在目錄
+templates = Jinja2Templates(directory="templates")
+
+@app.get("/")
+def read_index(request: Request):
+    data = {"title": "使用者", "user": "張成龍"} # 對應02_index.html的 {{ data.user }} 的 {{ data.title }}
+    # 使用 Jinja2 渲染模板
+    return templates.TemplateResponse("01_index.html", {"request": request, "data": data})
+
+```
+
+
+![](https://i.imgur.com/GnxXB3b.png)
+
+創建 templates 放入以下兩個html
+- 01_index.html
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatibl e" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FastAPI 靜態檔案與模板範例</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <h1>歡迎來到 FastAPI 範例頁面</h1>
+  <img src="/static/images/01.png" alt="Logo"> <!--01.png請替換成你的image name -->
+</body>
+</html>
+```
+- 02_index.html
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatibl e" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FastAPI 靜態檔案與模板範例</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <!-- <h1>歡迎來到 FastAPI 範例頁面</h1> -->
+  <h1>歡迎來到 {{ data.user }} 的 {{ data.title }}</h1>
+  <img src="/static/images/Jackie.png" alt="Logo">
+</body>
+</html>
+```
+
+啟動應用程式
+```cmd
+uvicorn main:app --reload
+```
+
+![](https://i.imgur.com/tp4cpfS.png)
+
+
