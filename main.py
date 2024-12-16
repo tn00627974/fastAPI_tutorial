@@ -4,8 +4,19 @@ from pydantic import BaseModel  #
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+# 允許跨域請求(這裡定義了來源、憑證和方法)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8080"],  # 或改成你需要的外部 或 內部 IP
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # 掛載 static 資料夾處理靜態檔案
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -14,18 +25,27 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 
-# @app.get("/")
-# def read_root():
-#     return {"message": "Hello, FastAPI!"}
 @app.get("/")
-def read_index(request: Request):
+def read_root():
     data = {"title": "網站", "user": "Ulysses"}
-    # 使用 Jinja2 渲染模板
-    return templates.TemplateResponse(
-        # "01_index.html", {"request": request, "data": data}
-        "02_index.html",
-        {"request": request, "data": data},
-    )
+    message = f"{data['user']} 的{data['title']}"
+    return {"message": message}
+
+
+# @app.get("/")
+# def read_index(request: Request):
+#     data = {"title": "網站", "user": "Ulysses"}
+#     # 使用 Jinja2 渲染模板
+#     return templates.TemplateResponse(
+#         # "01_index.html", {"request": request, "data": data}
+#         "02_index.html",
+#         {"request": request, "data": data},
+#     )
+
+
+@app.get("/items/{item_id}")
+async def read_item(item_id: int, query: str = None):
+    return {"item_id": item_id, "query": query}
 
 
 @app.get("/items/{item_id}")
@@ -62,6 +82,6 @@ class Item(BaseModel):
     description: str = None
 
 
-@app.post("/item/")
+@app.post("/items/")
 async def create_item(item: Item):
-    return item
+    return {"item_name": item.name, "item_price": item.price}
