@@ -354,3 +354,273 @@ uvicorn main:app --reload
 ![](https://i.imgur.com/tp4cpfS.png)
 
 
+# 06_FastAPI x Vue js前後端分離設計
+
+前後端分離 ?
+
+
+![](https://i.imgur.com/BwP0lzR.png)
+
+
+![](https://i.imgur.com/bVVKFxT.png)
+
+
+![](https://i.imgur.com/UaYsawX.png)
+
+下載nodejs
+https://nodejs.org/zh-tw
+
+- 查看`node`是否安裝
+```cmd
+node -v 
+```
+
+```cmd
+npm install -g @vue/cli
+```
+
+- 查看`vue`是否安裝
+	顯示`@vue/cli 5.0.8`
+	代表安裝5.0.8版本
+	
+```cmd
+vue -version
+```
+
+- cd `C:\Users\tn006\Desktop\fastAPI`(替換成你的專案路徑)
+- 開始創建vue的專案在fastAPI的資料夾下
+
+```cmd
+vue create fastapi-frontend
+```
+
+![](https://i.imgur.com/sSprRpg.png)
+
+選項分為 :
+- [1] Vue3 (這邊選擇 Vue 3 版本作為專案使用)
+- [ ] Vue2 
+- [ ] 提供更細緻的自定義能力
+
+[Vue2與Vue3差異](https://hackmd.io/@grayshine/BJ6gbNV8F/%2FQvsOBO9QQPGTqaYO0Cj4TQ)
+
+專案啟動中...
+
+![](https://i.imgur.com/7TLRSqw.png)
+
+
+```cmd
+npm run serve
+```
+
+打開瀏覽器
+
+```
+http://localhost:8080/
+```
+
+預設vue專案的啟動畫面
+
+![](https://i.imgur.com/6NsigoZ.png)
+
+---
+接著新建在 `/src/components/Home.vue` 
+
+![](https://i.imgur.com/PQJCOtj.png)
+
+- Home.vue 程式碼
+```vue
+<template>
+  <div>
+    <h1>{{ message }}</h1>
+    <button @click="getData">Get Data</button>
+    <button @click="posthData">Post Data</button>
+  </div>
+</template>
+
+<script>
+export default {
+  name: "DataComponent",
+  data() {
+    return {
+      message: "This is some default message.",
+    };
+  },
+
+  methods: {
+    async getData() {
+      try {
+        const response = await fetch("http://127.0.0.1:8000/");
+        const data = await response.json();
+        this.message = data.message;
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    },
+
+    async posthData() {
+      try {
+        const item = {
+          name: "Test",
+          price: 100.0,
+          description: "This is an example item.",
+        };
+        const response = await fetch("http://127.0.0.1:8000/items", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(item),
+        });
+        const data = await response.json();
+        this.message = `name: "${data.item_name}", price: ${data.item_price}`;
+        // this.message = data.item_name;
+      } catch (error) {
+        console.error("Error posting data:", error);
+      }
+    },
+  },
+};
+</script>
+```
+
+ 首先先建立兩個button去對應 `getData` 跟`posthData`funtion
+```vue
+    <button @click="getData">Get Data</button>
+    <button @click="posthData">Post Data</button>
+```
+
+```vue
+<script>
+export default {
+  name: "DataComponent",
+  data() {
+    return {
+      message: "This is some default message.",
+    };
+  },
+
+  methods: {
+    async getData() {
+      try {
+        const response = await fetch("http://127.0.0.1:8000/");
+        const data = await response.json();
+        this.message = data.message;
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    },
+
+    async posthData() {
+      try {
+        const item = {
+          name: "Test",
+          price: 100.0,
+          description: "This is an example item.",
+        };
+        const response = await fetch("http://127.0.0.1:8000/items", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(item),
+        });
+        const data = await response.json();
+        this.message = `name: "${data.item_name}", price: ${data.item_price}`;
+        // this.message = data.item_name;
+      } catch (error) {
+        console.error("Error posting data:", error);
+      }
+    },
+  },
+};
+</script>
+```
+
+
+接著修改啟動檔`App.vue`
+	修改成 `import Home from "./components/Home";`
+	修改成 `export default {`
+	`name: "App",`
+	  `components: {`
+	 ``   Home,`
+	``  },`
+	`};`
+```vue
+<template>
+  <div id="app">
+    <img alt="Vue logo" src="./assets/logo.png" />
+    <Home />
+  </div>
+</template>
+
+<script>
+import Home from "./components/Home";
+
+export default {
+  name: "App",
+  components: {
+    Home,
+  },
+};
+</script>
+
+<style>
+#app {
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #2c3e50;
+  margin-top: 60px;
+}
+</style>
+```
+
+![](https://i.imgur.com/pAY73wS.png)
+
+### 設置了跨域資源共享(CORS)
+
+
+讓vue 與 fastAPI的 8000端口進行fetch `127.0.0.1:8000`
+```python
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+# 允許跨域請求(這裡定義了來源、憑證和方法)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8080"],  # 或改成你需要的外部 或 內部 IP
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/")
+def read_root():
+    data = {"title": "網站", "user": "Ulysses"}
+    message = f"{data['user']} 的{data['title']}"
+    return {"message": message}
+```
+
+
+這段程式碼使用 FastAPI 框架創建了一個 web 應用程序,並設置了跨域資源共享(CORS)中間件。
+
+主要設置包括:
+
+1. 允許來自 `http://localhost:8080` 的跨域請求。
+2. 允許使用憑證進行跨域請求。
+3. 允許使用所有 HTTP 方法進行跨域請求。
+4. 允許使用所有 HTTP 標頭進行跨域請求。
+
+
+![](https://i.imgur.com/STAZA71.png)
+
+
+![](https://i.imgur.com/w23Gh4b.png)
+
+
+
+
+
+
