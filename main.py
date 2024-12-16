@@ -1,13 +1,31 @@
 from fastapi import FastAPI
 from fastapi import Query  # 用來設定查詢參數
 from pydantic import BaseModel  #
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi.requests import Request
 
 app = FastAPI()
 
+# 掛載 static 資料夾處理靜態檔案
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# 建立 Jinja2 模板引擎的實例,指定模板所在目錄
+templates = Jinja2Templates(directory="templates")
+
+
+# @app.get("/")
+# def read_root():
+#     return {"message": "Hello, FastAPI!"}
 @app.get("/")
-def read_root():
-    return {"message": "Hello, FastAPI!"}
+def read_index(request: Request):
+    data = {"title": "網站", "user": "Ulysses"}
+    # 使用 Jinja2 渲染模板
+    return templates.TemplateResponse(
+        # "01_index.html", {"request": request, "data": data}
+        "02_index.html",
+        {"request": request, "data": data},
+    )
 
 
 @app.get("/items/{item_id}")
