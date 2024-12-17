@@ -620,6 +620,58 @@ def read_root():
 ![](https://i.imgur.com/w23Gh4b.png)
 
 
+# 07_FastAPI連結資料庫教學
+
+
+![](https://i.imgur.com/Z5Awpq2.png)
+
+
+
+![](https://i.imgur.com/mnup62c.png)
+
+
+![](https://i.imgur.com/ZNLDUvf.png)
+
+### 使用 UV 虛擬環境 
+
+**uv 初始化+專案名稱**
+```cmd
+uv init fastapi_database
+cd .\fastapi_database\
+```
+
+**uv安裝依賴套件** 
+```
+uv add fastapi uvicorn sqlalchemy pydantic
+```
+
+**若要移除相關依賴你也可以使用 `remove`
+```
+uv remove uvicorn
+```
+
+- **uv 啟動 uvicorn**
+```cmd
+uv run uvicorn hello:app --reload
+```
+
+```cmd
+uv run python --verison
+```
+
+**uv更改python版本的方式**
+
+打開 `.python-version`
+將`3.12` 修改成 `3.9`
+再執行以下指令
+```
+uv sync
+```
+
+![](https://i.imgur.com/Ev39jF0.png)
+
+![](https://i.imgur.com/aG3u9d6.png)
+
 
 
 
