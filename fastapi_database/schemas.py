@@ -18,5 +18,5 @@ class Product(ProductBase):
     id: int
 
     class Config:
-        # orm_mode = True  # 設定 orm_mode 為 True，允許 Pydantic 模型與 ORM 模型互動
-        from_attributes = True  # Updated from orm_mode to from_attributes for Pydantic V2 compatibility
+        # orm_mode = True  # Pydantic v1 版本 : 設定 orm_mode 為 True，允許 Pydantic 模型與 ORM 模型互動
+        from_attributes = True  # Pydantic v2 版本 : 設定 from_attributes 為 True，允許 Pydantic 模型與 ORM 模型互動

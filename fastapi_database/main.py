@@ -6,15 +6,16 @@ from fastapi import (
 from sqlalchemy.orm import Session
 from models import Product
 from schemas import ProductCreate, Product as ProductSchema
-from database import engine, Base, get_db
+from database import engine, Base, get_db, init_db
 
 app = FastAPI()
 
-Base.metadata.create_all(bind=engine)  # 創建資料庫表
+# Base.metadata.create_all(bind=engine)  # 創建資料庫表
+init_db()  # 初始化資料庫
 
 
 # 創建
-@app.post("/products/", response_model=ProductCreate)
+@app.post("/products/", response_model=ProductSchema)
 def create_product(product: ProductCreate, db: Session = Depends(get_db)):
     # 創建產品時需要指定 id,因為資料庫會自動生成
     db_product = Product(
@@ -34,7 +35,7 @@ def read_products(skip: int = 0, limit: int = 10, db: Session = Depends(get_db))
 
 
 # 查詢1筆商品
-@app.get("/produts/{product_id}", response_model=ProductSchema)
+@app.get("/products/{product_id}", response_model=ProductSchema)
 def read_product(product_id: int, db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if product is None:
@@ -75,3 +76,10 @@ def delete_products(db: Session = Depends(get_db)):
     db.query(Product).delete()
     db.commit()
     return {"message": "已刪除所有商品"}
+
+
+# 啟動服務 (省略uvicorn main:app --reload)
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
