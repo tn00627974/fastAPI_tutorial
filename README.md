@@ -674,5 +674,331 @@ uv sync
 
 
 
+![](https://i.imgur.com/Vbl00ZD.png)
+
+
+`main.py`
+
+```python
+from fastapi import (
+    FastAPI,
+    Depends,
+    HTTPException,
+)  # Depends 用於依賴注入 HTTPException 用於拋出異常
+from sqlalchemy.orm import Session
+from models import Product
+from schemas import ProductCreate, Product as ProductSchema
+from database import engine, Base, get_db
+
+app = FastAPI()
+
+Base.metadata.create_all(bind=engine)  # 創建資料庫表
+
+
+# 創建
+@app.post("/products/", response_model=ProductCreate)
+def create_product(product: ProductCreate, db: Session = Depends(get_db)):
+    # 創建產品時需要指定 id,因為資料庫會自動生成
+    db_product = Product(
+        name=product.name, description=product.description, price=product.price
+    )
+    db.add(db_product)
+    db.commit()
+    db.refresh(db_product)  # 刷新以確保獲取自動生成的 id
+    return db_product
+
+
+# 查詢所有商品 前10筆
+@app.get("/products/", response_model=list[ProductSchema])
+def read_products(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+    products = db.query(Product).offset(skip).limit(limit).all()
+    return products
+
+
+# 查詢1筆商品
+@app.get("/produts/{product_id}", response_model=ProductSchema)
+def read_product(product_id: int, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return product
+
+
+# 更新
+@app.put("/products/{product_id}", response_model=ProductSchema)
+def update_product(
+    product_id: int, product: ProductCreate, db: Session = Depends(get_db)
+):
+    db_product = db.query(Product).filter(Product.id == product_id).first()
+    if db_product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+    db_product.name = product.name
+    db_product.description = product.description
+    db_product.price = product.price
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+
+# 刪除
+@app.delete("/products/{product_id}")
+def delete_product(product_id: int, db: Session = Depends(get_db)):
+    db_product = db.query(Product).filter(Product.id == product_id).first()
+    if db_product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+    db.delete(db_product)
+    db.commit()
+    return {"message": f"刪除{db_product.name}"}
+
+
+# 刪除所有商品
+@app.delete("/products/")
+def delete_products(db: Session = Depends(get_db)):
+    db.query(Product).delete()
+    db.commit()
+    return {"message": "已刪除所有商品"}
+
+
+# 啟動服務 (省略uvicorn main:app --reload)
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+
+```
+
+`database.py`用於建立資料庫連結 與 繪畫
+```python
+from sqlalchemy import create_engine  # 匯入 create_engine 函數，用於建立資料庫引擎
+from sqlalchemy.ext.declarative import (
+    declarative_base,
+)  # 匯入 declarative_base 函數，用於建立基礎類
+from sqlalchemy.orm import sessionmaker  # 匯入 sessionmaker 函數，用於建立資料庫會話
+
+# 設定資料庫的 URL，這裡使用的是 SQLite 資料庫
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+
+# 建立資料庫引擎，並設定 check_same_thread 參數為 False，允許多線程訪問
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+
+# 建立資料庫會話（Session）
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# 建立基礎類，所有的 ORM 模型都將繼承自這個基礎類
+Base = declarative_base()
+
+
+# 定義一個生成資料庫會話的函數 get_db，這個函數會在請求期間打開一個資料庫會話，並在請求結束後關閉
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+```
+
+
+- `autocommit=False`：這個參數設定會話不會自動提交變更。這意味著你需要手動提交變更，這樣可以更好地控制事務。
+- `autoflush=False`：這個參數設定會話不會自動刷新。這意味著在查詢之前不會自動將所有掛起的變更發送到資料庫，這樣可以避免一些不必要的資料庫操作。
+
+
+`models.py`用於建立資料欄位`products`
+
+四個欄位分別是`id , name , description , price `
+```python
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+)  # 匯入 Column, Integer, String 類，用於定義資料庫欄位
+from database import Base  # 匯入 Base 類，用於繼承建立 ORM 模型
+
+
+# 定義 Product 類，繼承自 Base 類，作為 ORM 模型
+class Product(Base):
+    __tablename__ = "products"  # 指定資料表名稱為 "products"
+
+    id = Column(
+        Integer, primary_key=True, index=True
+    )  # 定義 id 欄位，整數型，主鍵，並建立索引
+    name = Column(String, index=True)  # 定義 name 欄位，字串型，並建立索引
+    description = Column(String)  # 定義 description 欄位，字串型
+    price = Column(Integer)  # 定義 price 欄位，整數型
+
+```
+
+
+- `sessionmaker` 用來創建 `SessionLocal` 工廠，這個工廠可以生成 `Session` 物件。
+- `SessionLocal()` 用來創建 `Session` 物件 `db`，這個物件可以用來與資料庫進行操作。
+
+
+
+`schemas.py` 用於
+```python
+from pydantic import BaseModel
+
+
+# 定義 ProductBase 類，作為 Product 的基礎類
+class ProductBase(BaseModel):
+    name: str
+    description: str
+    price: int
+
+
+# 定義 ProductCreate 類，繼承自 ProductBase，用於創建 Product
+class ProductCreate(ProductBase):
+    pass
+
+
+# 定義 Product 類，繼承自 ProductBase，並添加 id 欄位
+class Product(ProductBase):
+    id: int
+
+    class Config:
+		# orm_mode = True  # 設定 orm_mode 為 True，允許 Pydantic 模型與 ORM 模型互動
+        from_attributes = True  # Updated from orm_mode to from_attributes for Pydantic V2 compatibility
+
+```
+
+
+##### 遇到Error
+* 'orm_mode' has been renamed to 'from_attributes'
+  warnings.warn(message, UserWarning)
+
+解決方案 : 
+```python
+class Product(ProductBase):
+    id: int
+
+    class Config:
+        # orm_mode = True  # Pydantic v1 版本 : 設定 orm_mode 為 True，允許 Pydantic 模型與 ORM 模型互動
+        from_attributes = True  # Pydantic v2 版本 : 設定 from_attributes 為 True，允許 Pydantic 模型與 ORM 模型互動
+```
+	使用`from_attributes = True  # Updated from orm_mode to from_attributes for Pydantic V2 compatibility `
+
+
+
+
+
+```python
+Base.metadata.create_all(bind=engine)  # 創建資料庫表
+```
+- 自動生成`sqllist` 檔案，在路徑 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+
+![](https://i.imgur.com/t1Goym2.png)
+
+### 加入自動測試 pytest 
+
+```cmd 
+uv pip install pytest httpx
+```
+
+`test_main.py`用來測試及發送資料
+```python
+import pytest
+from fastapi.testclient import TestClient
+from main import app
+from database import init_db, clear_db
+
+client = TestClient(app)
+
+
+@pytest.fixture(scope="module", autouse=True)
+def setup_database():
+    # 初始化資料庫
+    init_db()
+    yield
+    # 清理資料庫（如果需要）
+    # clear_db()
+
+
+def test_create_product():
+    response = client.post(
+        "/products/",
+        json={"name": "Test Product", "description": "Test Description", "price": 100},
+    )
+    assert response.status_code == 200
+    assert response.json()["name"] == "Test Product"
+    assert response.json()["description"] == "Test Description"
+    assert response.json()["price"] == 100
+
+
+def test_read_products():
+    response = client.get("/products/")
+    assert response.status_code == 200
+    assert len(response.json()) > 0
+
+
+def test_read_product():
+    # 先創建一個產品
+    response = client.post(
+        "/products/",
+        json={
+            "name": "Another Product",
+            "description": "Another Description",
+            "price": 200,
+        },
+    )
+    assert response.status_code == 200
+    product_id = response.json()["id"]
+
+    # 查詢該產品
+    response = client.get(f"/products/{product_id}")
+    assert response.status_code == 200
+    assert response.json()["name"] == "Another Product"
+    assert response.json()["description"] == "Another Description"
+    assert response.json()["price"] == 200
+
+
+def test_update_product():
+    # 先創建一個產品
+    response = client.post(
+        "/products/",
+        json={
+            "name": "Update Product",
+            "description": "Update Description",
+            "price": 300,
+        },
+    )
+    assert response.status_code == 200
+    product_id = response.json()["id"]
+
+    # 更新該產品
+    response = client.put(
+        f"/products/{product_id}",
+        json={
+            "name": "Updated Product",
+            "description": "Updated Description",
+            "price": 400,
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["name"] == "Updated Product"
+    assert response.json()["description"] == "Updated Description"
+    assert response.json()["price"] == 400
+
+
+def test_delete_product():
+    # 先創建一個產品
+    response = client.post(
+        "/products/",
+        json={
+            "name": "Delete Product",
+            "description": "Delete Description",
+            "price": 500,
+        },
+    )
+    assert response.status_code == 200
+    product_id = response.json()["id"]
+
+    # 刪除該產品
+    response = client.delete(f"/products/{product_id}")
+    assert response.status_code == 200
+    assert response.json()["message"] == f"刪除Delete Product"
+
+```
+
 
 
