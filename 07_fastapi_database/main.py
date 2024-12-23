@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from models import Product
 from schemas import ProductCreate, Product as ProductSchema
 from database import engine, Base, get_db, init_db
+import jwt
+from passlib.context import CryptContext  # 處理密碼的庫
 
 app = FastAPI()
 
