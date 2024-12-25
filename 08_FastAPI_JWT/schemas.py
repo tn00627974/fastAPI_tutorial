@@ -33,7 +33,7 @@ class UserCreate(UserBase):
 
 class User(UserBase):
     id: int
-    role: str  # 返回用戶包含的角色資訊
+    role: None  # 返回用戶包含的角色資訊
 
     class Config:
         from_attributes = True

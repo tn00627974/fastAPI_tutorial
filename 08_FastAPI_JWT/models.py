@@ -21,6 +21,6 @@ class User(Base):
     __tablename__ = "users"  # 指定資料表名稱為 "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
+    username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     role = Column(String)  # 用於角色管理，默認為普通用戶
